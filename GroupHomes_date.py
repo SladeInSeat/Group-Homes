@@ -51,7 +51,7 @@ try:
         for record in PlanGH:
             PlanningLicenses.append(record)
 
-    #   Compare the two lists, write to new lists which licenses are in one but not the other
+   #   Compare the two lists, write to new lists which licenses are in one but not the other. maybe use set symetric set difference instead. maybe later.
 
     InComplus_NotInSDE = ['0',]
     InSDE_NotInComplus = ['0',]
