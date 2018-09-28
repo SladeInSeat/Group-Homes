@@ -1,7 +1,5 @@
-import os
 import arcpy
 import smtplib
-import string
 import traceback
 import datetime
 import StringIO
@@ -39,34 +37,27 @@ Sql_copytable = "CATEGORY IN  ('623110','623210','623220','623311','623312','623
 
 try:
     # create lists of license numbers from Community Plus and corresponding table in GIS Cluster
-    ComplusLicenses = []
-    PlanningLicenses = []
+    ComplusLicenses = set()
+    PlanningLicenses = set()
 
 
     with arcpy.da.SearchCursor(ComPlus_BusiLic,'LICENSE',Sql_copytable) as ComplusUC:
         for record in ComplusUC:
-            ComplusLicenses.append(record)
+            ComplusLicenses.add(record)
 
     with arcpy.da.SearchCursor(Planning_Group_Homes,'LICENSE') as PlanGH:
         for record in PlanGH:
-            PlanningLicenses.append(record)
+            PlanningLicenses.add(record)
 
    #   Compare the two lists, write to new lists which licenses are in one but not the other. maybe use set symetric set difference instead. maybe later.
 
-    InComplus_NotInSDE = ['0',]
-    InSDE_NotInComplus = ['0',]
+    InComplus_NotInSDE = ComplusLicenses.difference(PlanningLicenses)
+    InSDE_NotInComplus = PlanningLicenses.difference(ComplusLicenses)
 
-    for record in ComplusLicenses:
-        if record not in PlanningLicenses:
-            InComplus_NotInSDE.append(record)
-
-    for record in PlanningLicenses:
-        if record not in ComplusLicenses:
-            InSDE_NotInComplus.append(record)
 
     #   If InComplus_NotInSDE is not empty, then proceed to append record to GIS_ALCOHOL_LICENSES, and create a point fc of record and append to AlocholLicense_complus
 
-    if len(InComplus_NotInSDE) == 1:
+    if len(InComplus_NotInSDE) == 0:
         with open(r"C:\Users\jsawyer\Desktop\Tickets\18140 Group Homes\logfile.txt","a") as log:
             now = datetime.datetime.now().strftime("%Y-%d-%m")
             log.write("\n-----------------\n")
@@ -146,23 +137,23 @@ try:
             arcpy.Delete_management(fc)
 
     #   This section will delete from group_homes_complus and Planning.SDE.WPB_GIS_GROUP_HOMES any records that exists in Planning SDE but not in Complus (probably due to status change in complus)
-    if len(InSDE_NotInComplus) == 1:
-        pass
+    if len(InSDE_NotInComplus) == 0:
+        with open(r"C:\Users\jsawyer\Desktop\Tickets\18140 Group Homes\logfile.txt", "a") as log:
+            log.write("no new Group Homes deleted \n\n")
 
     else:
-        InSDE_comprehension = [record[0].encode('ascii').rstrip() for record in InSDE_NotInComplus]
-        InSDE_query_tup = tuple(InSDE_comprehension)
-        print InSDE_query_tup
-        InSDE_query = "LICENSE IN {}".format(InSDE_query_tup)
+        InSDE_tup = tuple([record[0].encode('ascii').rstrip() for record in InSDE_NotInComplus])
+        print InSDE_tup
+        InSDE_query = "LICENSE IN {}".format(InSDE_tup)
         print InSDE_query
-        grouphomes_lyr = arcpy.MakeFeatureLayer_management(group_homes,'grouphomeslyr')
-        arcpy.SelectLayerByAttribute_management(grouphomes_lyr,"NEW_SELECTION",InSDE_query)
+        grouphomes_lyr = arcpy.MakeFeatureLayer_management(group_homes, 'grouphomeslyr')
+        arcpy.SelectLayerByAttribute_management(grouphomes_lyr, "NEW_SELECTION", InSDE_query)
         if int(arcpy.GetCount_management(grouphomes_lyr)[0]) == (len(InSDE_NotInComplus) - 1):  #   ensures there is a selection whose quantity equals number of licenses to remove so that DeleteFeatures doesnt delete entire fc
             arcpy.DeleteFeatures_management(grouphomes_lyr)
         else:
             print "count of selected records in grouphomes_lyr != len(InSDE_notInComplus) line 166"
-        grouphomes_tblview = arcpy.MakeTableView_management(Planning_Group_Homes_fullpath,'grouphomestblview')
-        arcpy.SelectLayerByAttribute_management(grouphomes_tblview,"NEW_SELECTION",InSDE_query)
+        grouphomes_tblview = arcpy.MakeTableView_management(Planning_Group_Homes_fullpath, 'grouphomestblview')
+        arcpy.SelectLayerByAttribute_management(grouphomes_tblview,"NEW_SELECTION", InSDE_query)
         print len(InSDE_NotInComplus) - 1
         print arcpy.GetCount_management(grouphomes_tblview)
         if int(arcpy.GetCount_management(grouphomes_tblview)[0]) == (len(InSDE_NotInComplus) - 1): #   ensures there is a selection whose quantity equals number of licenses to remove so that DeleteFeatures doesnt delete entire fc
@@ -177,7 +168,7 @@ try:
         sender = 'scriptmonitorwpb@gmail.com'
         sender_pw = "Bibby1997"
         server = 'smtp.gmail.com'
-        body_text = "From: {0}\r\nTo: {1}\r\nSubject: {2}\r\nHere is a list license numbers of the deleted records.\nThese have been deleted from GroupHomes_complus feature class and Planning.SDE.WPB_GIS_GROUP_HOMES:\n{3}".format(sender, sendto, subject,InSDE_query_tup)
+        body_text = "From: {0}\r\nTo: {1}\r\nSubject: {2}\r\nHere is a list license numbers of the deleted records.\nThese have been deleted from GroupHomes_complus feature class and Planning.SDE.WPB_GIS_GROUP_HOMES:\n{3}".format(sender, sendto, subject,InSDE_query)
 
 
         gmail = smtplib.SMTP(server, 587)
