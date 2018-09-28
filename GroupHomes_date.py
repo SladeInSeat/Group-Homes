@@ -57,11 +57,11 @@ try:
     InSDE_NotInComplus = ['0',]
 
     for record in ComplusLicenses:
-        if not record in PlanningLicenses:
+        if record not in PlanningLicenses:
             InComplus_NotInSDE.append(record)
 
     for record in PlanningLicenses:
-        if not record in ComplusLicenses:
+        if record not in ComplusLicenses:
             InSDE_NotInComplus.append(record)
 
     #   If InComplus_NotInSDE is not empty, then proceed to append record to GIS_ALCOHOL_LICENSES, and create a point fc of record and append to AlocholLicense_complus
@@ -79,8 +79,7 @@ try:
 
         #   change list to a tuple (in prepartation of creating a text string for the query). InComplus_NotInSDE is in unicode, need it in plain ascii text for query
 
-        InComplus_NotInSDE = [x[0].encode('ascii') for x in InComplus_NotInSDE] # list comprehension to reformat to ascii
-        InComplus_NotInSDE_tup = tuple(InComplus_NotInSDE)
+        InComplus_NotInSDE_tup = tuple([x[0].encode('ascii') for x in InComplus_NotInSDE]) # list comprehension to reformat to ascii
 
         print InComplus_NotInSDE_tup
         #   save the query as a string
@@ -89,21 +88,21 @@ try:
         print sqlquery
         #   it doesnt like insert cursor, so make a temp table and append to that, then append to GIS_ALCOHOL_LICENSES
 
-        arcpy.CreateTable_management(db_conn,"TempTableGroupHomes",Planning_Group_Homes)
+        arcpy.CreateTable_management(db_conn,"TempTableGroupHomes", Planning_Group_Homes)
 
-        with arcpy.da.SearchCursor(ComPlus_BusiLic,Fields,sqlquery) as sc:
-            with arcpy.da.InsertCursor(TempTable,Fields) as ic:
+        with arcpy.da.SearchCursor(ComPlus_BusiLic, Fields, sqlquery) as sc:
+            with arcpy.da.InsertCursor(TempTable, Fields) as ic:
                 for record in sc:
                     ic.insertRow(record)
 
-        arcpy.Append_management(TempTable,Planning_Group_Homes)
+        arcpy.Append_management(TempTable, Planning_Group_Homes)
 
         #   THe following block creates a Query Layer from a join between the new licenses identified earlier and the parcels in which they reside, saves the Query layer as a polygon fc...
         #   changes that to point fc, then appends the points to GroupHomes_complus
 
         sql = "SELECT PARCELS.[OBJECTID],[OWNPARCELID] AS PARCELS_PCN,[SRCREF],[OWNTYPE],[GISdata_GISADMIN_OwnerParcel_AR],[LASTUPDATE],[LASTEDITOR],[Shape],[PARCEL_ID] AS COMPLUS_PCN,[BUSINESS_ID],[LICENSE],[CATEGORY],[CATEGORY_DESC],[STAT],[ISSUE],[EXPIRATION],[BUS_NAME],[BUS_PROD],[SERVICE],[ADRS1],[BUS_PHONE],[BUS_EMAIL],[TYPE] FROM [Planning].[sde].[PLANNINGPARCELS] PARCELS,[Planning].[sde].[WPB_GIS_GROUP_HOMES] GROUPHOMES WHERE PARCELS.OWNPARCELID = GROUPHOMES.PARCEL_ID AND {}".format(sqlquery)
 
-        arcpy.MakeQueryLayer_management(input_database=db_conn, out_layer_name=query_layer, query=sql, oid_fields="OBJECTID", shape_type="POLYGON", srid="2881", spatial_reference=spatialref)
+        arcpy.MakeQueryLayer_management(input_database=db_conn, out_layer_name=query_layer, query=sql, oid_fields= "OBJECTID", shape_type= "POLYGON", srid="2881", spatial_reference=spatialref)
         arcpy.management.CopyFeatures(query_layer, group_homes_poly, None, None, None, None)
         arcpy.FeatureToPoint_management(group_homes_poly,group_homes_points,"INSIDE")
         arcpy.Append_management(group_homes_points,group_homes)
@@ -111,7 +110,7 @@ try:
 
         #   Create the alert email text. Uses StringIO to create a string treated as a file for formatting purposes
 
-        TT_fieldnames =['PARCEL_ID','LICENSE','BUS_NAME','ADRS1']
+        TT_fieldnames =['PARCEL_ID', 'LICENSE', 'BUS_NAME', 'ADRS1']
         string_obj = StringIO.StringIO()
         with arcpy.da.SearchCursor(TempTable,TT_fieldnames) as TTSC:
             for row in TTSC:
@@ -120,14 +119,13 @@ try:
 
         report = string_obj.getvalue()
 
-        today =  datetime.datetime.now().strftime("%d-%m-%Y")
+        today = datetime.datetime.now().strftime("%d-%m-%Y")
         subject = 'Group Homes report ' +  today
         sendto = ['cdglass@wpb.org','jssawyer@wpb.org'] # ,'JJudge@wpb.org','NKerr@wpb.org'
         sender = 'scriptmonitorwpb@gmail.com'
         sender_pw = "Bibby1997"
         server = 'smtp.gmail.com'
         body_text = "From: {0}\r\nTo: {1}\r\nSubject: {2}\r\nHere is a list of the new licenses.\nThese have been added to GroupHomes_complus:\n\nPCN\t\tLicense Number\tBusiness Name\tAddress\n\n{3}".format(sender, sendto, subject,report)
-
 
         gmail = smtplib.SMTP(server, 587)
         gmail.starttls()
@@ -143,13 +141,9 @@ try:
             log.write(report)
             log.write("\n")
 
-
-
         del_list = (TempTable,group_homes_poly,group_homes_points)
         for fc in del_list:
             arcpy.Delete_management(fc)
-
-        arcpy.AcceptConnections(db_conn,True)
 
     #   This section will delete from group_homes_complus and Planning.SDE.WPB_GIS_GROUP_HOMES any records that exists in Planning SDE but not in Complus (probably due to status change in complus)
     if len(InSDE_NotInComplus) == 1:
@@ -220,3 +214,6 @@ except Exception as E:
     gmail.quit()
 
     print body_text
+
+finally:
+    arcpy.AcceptConnections(db_conn, True)
