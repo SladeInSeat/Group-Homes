@@ -154,8 +154,8 @@ try:
         if int(arcpy.GetCount_management(grouphomes_lyr)[0]) == (len(InSDE_NotInComplus) - 1):
             arcpy.DeleteFeatures_management(grouphomes_lyr)
         else:
-        grouphomes_tblview = arcpy.MakeTableView_management(Planning_Group_Homes_fullpath, 'grouphomestblview')
-        arcpy.SelectLayerByAttribute_management(grouphomes_tblview,"NEW_SELECTION", InSDE_query)
+            grouphomes_tblview = arcpy.MakeTableView_management(Planning_Group_Homes_fullpath, 'grouphomestblview')
+            arcpy.SelectLayerByAttribute_management(grouphomes_tblview,"NEW_SELECTION", InSDE_query)
         #   ensures selection exists whose quantity equals number of licenses to remove
         #   so that DeleteFeatures doesnt delete entire fc
         if int(arcpy.GetCount_management(grouphomes_tblview)[0]) == (len(InSDE_NotInComplus) - 1):
@@ -164,18 +164,19 @@ try:
             print "count of selected records in grouphomes_tbleview != len(InSDE_NotInComplus) line 173"
 
         today =  datetime.datetime.now().strftime("%d-%m-%Y")
-        subject = 'Group Homes deleted licenses ' +  today
-        sendto = ['cdglass@wpb.org','jssawyer@wpb.org'] # ,'JJudge@wpb.org','NKerr@wpb.org'
+        subject = 'Group Homes deleted licenses ' + today
+        sendto = ['cdglass@wpb.org', 'jssawyer@wpb.org'] # ,'JJudge@wpb.org','NKerr@wpb.org'
         sender = 'scriptmonitorwpb@gmail.com'
         sender_pw = "Bibby1997"
         server = 'smtp.gmail.com'
-        body_text = "From: {0}\r\nTo: {1}\r\nSubject: {2}\r\nHere is a list license numbers of the deleted records.\nThese have been deleted from GroupHomes_complus feature class and Planning.SDE.WPB_GIS_GROUP_HOMES:\n{3}".format(sender, sendto, subject,InSDE_query)
-
+        body_text = "From: {0}\r\nTo: {1}\r\nSubject: {2}\r\nHere is a list license numbers of the deleted records.\n" \
+                    "These have been deleted from GroupHomes_complus feature class and " \
+                    "Planning.SDE.WPB_GIS_GROUP_HOMES:\n{3}".format(sender, sendto, subject, InSDE_query)
 
         gmail = smtplib.SMTP(server, 587)
         gmail.starttls()
-        gmail.login(sender,sender_pw)
-        gmail.sendmail(sender,sendto,body_text)
+        gmail.login(sender, sender_pw)
+        gmail.sendmail(sender, sendto, body_text)
         gmail.quit()
 
         with open(r"C:\Users\jsawyer\Desktop\Tickets\18140 Group Homes\logfile.txt","a") as log:
@@ -184,21 +185,21 @@ try:
             log.write(now)
             log.write('\n')
             log.write('This license has been deleted:')
-            log.write((", ").join(InSDE_NotInComplus))
+            log.write(", ").join(InSDE_NotInComplus)
             log.write("\n")
 
 except Exception as E:
-    arcpy.AcceptConnections(db_conn,True)
+    arcpy.AcceptConnections(db_conn, True)
 
-    today =  datetime.datetime.now().strftime("%Y-%d-%m")
-    subject = 'Group Homes script failure report ' +  today
-    sendto = "jssawyer@wpb.org" # ,'JJudge@wpb.org','NKerr@wpb.org'
+    today = datetime.datetime.now().strftime("%Y-%d-%m")
+    subject = 'Group Homes script failure report ' + today
+    sendto = "jssawyer@wpb.org"  # ,'JJudge@wpb.org','NKerr@wpb.org'
     sender = 'scriptmonitorwpb@gmail.com'
     sender_pw = "Bibby1997"
     server = 'smtp.gmail.com'
     log = traceback.format_exc()
     body_text = "From: {0}\r\nTo: {1}\r\nSubject: {2}\r\nAn error occured. Here are the Type, arguements, " \
-                "and log of the error\n\n{3}\n{4}\n{5}".format(sender, sendto, subject,type(E).__name__, E.args, log)
+                "and log of the error\n\n{3}\n{4}\n{5}".format(sender, sendto, subject, type(E).__name__, E.args, log)
 
     gmail = smtplib.SMTP(server, 587)
     gmail.starttls()
