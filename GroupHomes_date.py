@@ -163,7 +163,7 @@ try:
         else:
             print "count of selected records in grouphomes_tbleview != len(InSDE_NotInComplus) line 173"
 
-        today =  datetime.datetime.now().strftime("%d-%m-%Y")
+        today = datetime.datetime.now().strftime("%d-%m-%Y")
         subject = 'Group Homes deleted licenses ' + today
         sendto = ['cdglass@wpb.org', 'jssawyer@wpb.org'] # ,'JJudge@wpb.org','NKerr@wpb.org'
         sender = 'scriptmonitorwpb@gmail.com'
