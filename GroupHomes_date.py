@@ -147,7 +147,7 @@ try:
     else:
         InSDE_tup = tuple([record[0].encode('ascii').rstrip() for record in InSDE_NotInComplus])
         if len(InSDE_tup) == 1:
-            InSDE_query = InSDE_query = "LICENSE = '{}'".format(InSDE_tup[0])
+            InSDE_query = "LICENSE = '{}'".format(InSDE_tup[0])
         else:
             InSDE_query = "LICENSE IN {}".format(InSDE_tup)
         grouphomes_lyr = arcpy.MakeFeatureLayer_management(group_homes, 'grouphomeslyr')
@@ -188,7 +188,7 @@ try:
             log.write(now)
             log.write('\n')
             log.write('This license has been deleted:')
-            log.write(", ").join(InSDE_NotInComplus)
+            log.write(", ").join(str(obj) for obj in InSDE_NotInComplus)
             log.write("\n")
 
 except Exception as E:
