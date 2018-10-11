@@ -146,19 +146,22 @@ try:
 
     else:
         InSDE_tup = tuple([record[0].encode('ascii').rstrip() for record in InSDE_NotInComplus])
-        InSDE_query = "LICENSE IN {}".format(InSDE_tup)
+        if len(InSDE_tup) == 1:
+            InSDE_query = InSDE_query = "LICENSE = '{}'".format(InSDE_tup[0])
+        else:
+            InSDE_query = "LICENSE IN {}".format(InSDE_tup)
         grouphomes_lyr = arcpy.MakeFeatureLayer_management(group_homes, 'grouphomeslyr')
         arcpy.SelectLayerByAttribute_management(grouphomes_lyr, "NEW_SELECTION", InSDE_query)
         #   ensures selection exists whose quantity equals number of licenses to remove
         #   so that DeleteFeatures doesnt delete entire fc
-        if int(arcpy.GetCount_management(grouphomes_lyr)[0]) == (len(InSDE_NotInComplus) - 1):
+        if int(arcpy.GetCount_management(grouphomes_lyr)[0]) == (len(InSDE_NotInComplus)):
             arcpy.DeleteFeatures_management(grouphomes_lyr)
         else:
             grouphomes_tblview = arcpy.MakeTableView_management(Planning_Group_Homes_fullpath, 'grouphomestblview')
-            arcpy.SelectLayerByAttribute_management(grouphomes_tblview,"NEW_SELECTION", InSDE_query)
+            arcpy.SelectLayerByAttribute_management(grouphomes_tblview, "NEW_SELECTION", InSDE_query)
         #   ensures selection exists whose quantity equals number of licenses to remove
         #   so that DeleteFeatures doesnt delete entire fc
-        if int(arcpy.GetCount_management(grouphomes_tblview)[0]) == (len(InSDE_NotInComplus) - 1):
+        if int(arcpy.GetCount_management(grouphomes_tblview)[0]) == (len(InSDE_NotInComplus)):
             arcpy.DeleteRows_management(grouphomes_tblview)
         else:
             print "count of selected records in grouphomes_tbleview != len(InSDE_NotInComplus) line 173"
