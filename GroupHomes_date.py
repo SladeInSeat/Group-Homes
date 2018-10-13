@@ -5,8 +5,6 @@ import datetime
 import StringIO
 
 
-
-
 arcpy.env.workspace = r"Database Connections\SDE@Planning_CLUSTER.sde"
 arcpy.env.overwriteOutput = True
 db_conn = r"Database Connections\SDE@Planning_CLUSTER.sde"
@@ -71,12 +69,18 @@ try:
         #   InComplus_NotInSDE is in unicode, need it in plain ascii text for query
 
         InComplus_NotInSDE_tup = tuple([x[0].encode('ascii') for x in InComplus_NotInSDE])
+        print len(InComplus_NotInSDE_tup)
 
-        sqlquery = "LICENSE IN {}".format(InComplus_NotInSDE_tup)
+        if len(InComplus_NotInSDE_tup) == 1:
+            sqlquery = "LICENSE = '{}'".format(InComplus_NotInSDE_tup[0])
+        else:
+            sqlquery = "LICENSE IN {}".format(InComplus_NotInSDE_tup)
+
+        print 'sqlquery is: {}'.format(sqlquery)
 
         #   it doesnt like insert cursor, so make a temp table and append to that, then append to GIS_ALCOHOL_LICENSES
 
-        arcpy.CreateTable_management(db_conn,"TempTableGroupHomes", Planning_Group_Homes)
+        arcpy.CreateTable_management(db_conn, "TempTableGroupHomes", Planning_Group_Homes)
 
         with arcpy.da.SearchCursor(ComPlus_BusiLic, Fields, sqlquery) as sc:
             with arcpy.da.InsertCursor(TempTable, Fields) as ic:
@@ -115,8 +119,8 @@ try:
         report = string_obj.getvalue()
 
         today = datetime.datetime.now().strftime("%d-%m-%Y")
-        subject = 'Group Homes report ' +  today
-        sendto = ['cdglass@wpb.org','jssawyer@wpb.org'] # ,'JJudge@wpb.org','NKerr@wpb.org'
+        subject = 'Group Homes report ' + today
+        sendto = ['cdglass@wpb.org', 'jssawyer@wpb.org']  # ,'JJudge@wpb.org','NKerr@wpb.org'
         sender = 'scriptmonitorwpb@gmail.com'
         sender_pw = "Bibby1997"
         server = 'smtp.gmail.com'
@@ -124,14 +128,14 @@ try:
                     "These have been added to GroupHomes_complus:\n\nPCN\t\tLicense Number\tBusiness Name\t" \
                     "Address\n\n{3}".format(sender, sendto, subject,report)
 
-        gmail = smtplib.SMTP(server, 587)
-        gmail.starttls()
-        gmail.login(sender,sender_pw)
-        gmail.sendmail(sender,sendto,body_text)
-        gmail.quit()
+        # gmail = smtplib.SMTP(server, 587)
+        # gmail.starttls()
+        # gmail.login(sender, sender_pw)
+        # gmail.sendmail(sender, sendto, body_text)
+        # gmail.quit()
 
-        with open(r"C:\Users\jsawyer\Desktop\Tickets\18140 Group Homes\logfile.txt","a") as log:
-            now = datetime.datetime.now().strftime("%Y-%d-%m")
+        with open(r"C:\Users\jsawyer\Desktop\Tickets\18140 Group Homes\logfile.txt", "a") as log:
+            now = datetime.datetime.now().strftime("%m-%d-%Y")
             log.write("\n------------------------------------------\n\n")
             log.write(now)
             log.write('\n')
