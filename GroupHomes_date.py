@@ -22,7 +22,8 @@ group_homes_points = "GROUP_HOMES_points"
 group_homes = r"Database Connections\SDE@Planning_CLUSTER.sde\Planning.SDE.GroupHomes_complus"
 spatialref = arcpy.Describe(r"Database Connections\SDE@Planning_CLUSTER.sde\Planning.SDE.LandUsePlanning")\
     .spatialReference.exportToString()
-TempTable = r"Database Connections\SDE@Planning_CLUSTER.sde\Planning.SDE.TempTableGroupHomes"
+# TempTable = r"Database Connections\SDE@Planning_CLUSTER.sde\Planning.SDE.TempTableGroupHomes"
+TempTable = r"in_memory\Planning.SDE.TempTableGroupHomes"
 
 #   This sql query defines the data set by selecting from All_BUSINESSLICENSES on Comprod
 #   623110 Nursing Care Facilities
@@ -56,21 +57,18 @@ try:
     #  If InComplus_NotInSDE has members, append record to GIS_ALCOHOL_LICENSES, and add point to AlcoholLicense_complus
     #   If InSDE_NotInComplus has members, delete record from AlcoholLicense_complus and GIS_ALCOHOL_LICENSES
     if len(InComplus_NotInSDE) == 0:
-        with open(r"C:\Users\jsawyer\Desktop\Tickets\18140 Group Homes\logfile.txt","a") as log:
+        with open(r"C:\Users\jsawyer\Desktop\Tickets\18140 Group Homes\logfile.txt", "a") as log:
             now = datetime.datetime.now().strftime("%Y-%d-%m")
             log.write("\n-----------------\n")
             log.write(now + " no new Group Homes found\n\n")
 
     else:
-        arcpy.AcceptConnections(db_conn, True)
-        arcpy.DisconnectUser(db_conn, 'ALL')
-        arcpy.AcceptConnections(db_conn, False)
-
         #   InComplus_NotInSDE is in unicode, need it in plain ascii text for query
 
-        InComplus_NotInSDE_tup = tuple([x[0].encode('ascii') for x in InComplus_NotInSDE])
+        InComplus_NotInSDE_tup = tuple([license[0].encode('ascii').rstrip() for license in InComplus_NotInSDE])
         print len(InComplus_NotInSDE_tup)
 
+        #   trailing comma of single element tuples breaks query, accounted for below
         if len(InComplus_NotInSDE_tup) == 1:
             sqlquery = "LICENSE = '{}'".format(InComplus_NotInSDE_tup[0])
         else:
@@ -118,7 +116,7 @@ try:
 
         report = string_obj.getvalue()
 
-        today = datetime.datetime.now().strftime("%d-%m-%Y")
+        today = datetime.datetime.now().strftime("%m-%d-%Y")
         subject = 'Group Homes report ' + today
         sendto = ['cdglass@wpb.org', 'jssawyer@wpb.org']  # ,'JJudge@wpb.org','NKerr@wpb.org'
         sender = 'scriptmonitorwpb@gmail.com'
@@ -128,11 +126,11 @@ try:
                     "These have been added to GroupHomes_complus:\n\nPCN\t\tLicense Number\tBusiness Name\t" \
                     "Address\n\n{3}".format(sender, sendto, subject,report)
 
-        # gmail = smtplib.SMTP(server, 587)
-        # gmail.starttls()
-        # gmail.login(sender, sender_pw)
-        # gmail.sendmail(sender, sendto, body_text)
-        # gmail.quit()
+        gmail = smtplib.SMTP(server, 587)
+        gmail.starttls()
+        gmail.login(sender, sender_pw)
+        gmail.sendmail(sender, sendto, body_text)
+        gmail.quit()
 
         with open(r"C:\Users\jsawyer\Desktop\Tickets\18140 Group Homes\logfile.txt", "a") as log:
             now = datetime.datetime.now().strftime("%m-%d-%Y")
@@ -150,8 +148,8 @@ try:
 
     else:
         InSDE_tup = tuple([record[0].encode('ascii').rstrip() for record in InSDE_NotInComplus])
-        if len(InSDE_tup) == 1:
-            InSDE_query = "LICENSE = '{}'".format(InSDE_tup[0])
+        if len(InSDE_tup) == 1:  # logic to fix tuple trailing comma with 1 element
+            InSDE_query = "LICENSE = '{}'".format(InSDE_tup[0])  
         else:
             InSDE_query = "LICENSE IN {}".format(InSDE_tup)
         grouphomes_lyr = arcpy.MakeFeatureLayer_management(group_homes, 'grouphomeslyr')
@@ -170,7 +168,7 @@ try:
         else:
             print "count of selected records in grouphomes_tbleview != len(InSDE_NotInComplus) line 173"
 
-        today = datetime.datetime.now().strftime("%d-%m-%Y")
+        today = datetime.datetime.now().strftime("%m-%d-%Y")
         subject = 'Group Homes deleted licenses ' + today
         sendto = ['cdglass@wpb.org', 'jssawyer@wpb.org'] # ,'JJudge@wpb.org','NKerr@wpb.org'
         sender = 'scriptmonitorwpb@gmail.com'
@@ -187,7 +185,7 @@ try:
         gmail.quit()
 
         with open(r"C:\Users\jsawyer\Desktop\Tickets\18140 Group Homes\logfile.txt","a") as log:
-            now = datetime.datetime.now().strftime("%Y-%d-%m")
+            now = datetime.datetime.now().strftime("%m-%d-%Y")
             log.write("\n------------------------------------------\n\n")
             log.write(now)
             log.write('\n')
@@ -196,9 +194,7 @@ try:
             log.write("\n")
 
 except Exception as E:
-    arcpy.AcceptConnections(db_conn, True)
-
-    today = datetime.datetime.now().strftime("%Y-%d-%m")
+    today = datetime.datetime.now().strftime("%m-%d-%Y")
     subject = 'Group Homes script failure report ' + today
     sendto = "jssawyer@wpb.org"  # ,'JJudge@wpb.org','NKerr@wpb.org'
     sender = 'scriptmonitorwpb@gmail.com'
@@ -219,7 +215,7 @@ except Exception as E:
 finally:
     arcpy.AcceptConnections(db_conn, True)
 
-    del_list = (TempTable, group_homes_poly, group_homes_points)
+    del_list = (group_homes_poly, group_homes_points)
     for fc in del_list:
         if fc:
             arcpy.Delete_management(fc)
