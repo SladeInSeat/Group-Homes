@@ -22,8 +22,7 @@ group_homes_points = "GROUP_HOMES_points"
 group_homes = r"Database Connections\SDE@Planning_CLUSTER.sde\Planning.SDE.GroupHomes_complus"
 spatialref = arcpy.Describe(r"Database Connections\SDE@Planning_CLUSTER.sde\Planning.SDE.LandUsePlanning")\
     .spatialReference.exportToString()
-# TempTable = r"Database Connections\SDE@Planning_CLUSTER.sde\Planning.SDE.TempTableGroupHomes"
-TempTable = r"in_memory\Planning.SDE.TempTableGroupHomes"
+
 
 #   This sql query defines the data set by selecting from All_BUSINESSLICENSES on Comprod
 #   623110 Nursing Care Facilities
@@ -38,7 +37,7 @@ Sql_copytable = "CATEGORY IN  ('623110','623210','623220','623311','623312','623
 
 
 try:
-    # create lists of license numbers from Community Plus and corresponding table in GIS Cluster
+    # create sets of license numbers from Community Plus and corresponding table in GIS Cluster
     ComplusLicenses = set()
     PlanningLicenses = set()
 
@@ -55,7 +54,7 @@ try:
     InSDE_NotInComplus = PlanningLicenses.difference(ComplusLicenses)
 
     #  If InComplus_NotInSDE has members, append record to GIS_ALCOHOL_LICENSES, and add point to AlcoholLicense_complus
-    #   If InSDE_NotInComplus has members, delete record from AlcoholLicense_complus and GIS_ALCOHOL_LICENSES
+    #  If InSDE_NotInComplus has members, delete record from AlcoholLicense_complus and GIS_ALCOHOL_LICENSES
     if len(InComplus_NotInSDE) == 0:
         with open(r"C:\Users\jsawyer\Desktop\Tickets\18140 Group Homes\logfile.txt", "a") as log:
             now = datetime.datetime.now().strftime("%Y-%d-%m")
@@ -64,11 +63,10 @@ try:
 
     else:
         #   InComplus_NotInSDE is in unicode, need it in plain ascii text for query
-
         InComplus_NotInSDE_tup = tuple([license[0].encode('ascii').rstrip() for license in InComplus_NotInSDE])
         print len(InComplus_NotInSDE_tup)
 
-        #   trailing comma of single element tuples breaks query, accounted for below
+        #   trailing comma of single element tuples breaks query
         if len(InComplus_NotInSDE_tup) == 1:
             sqlquery = "LICENSE = '{}'".format(InComplus_NotInSDE_tup[0])
         else:
@@ -77,8 +75,7 @@ try:
         print 'sqlquery is: {}'.format(sqlquery)
 
         #   it doesnt like insert cursor, so make a temp table and append to that, then append to GIS_ALCOHOL_LICENSES
-
-        arcpy.CreateTable_management(db_conn, "TempTableGroupHomes", Planning_Group_Homes)
+        TempTable = arcpy.CreateTable_management(r"in_memory", "TempTableGroupHomes", Planning_Group_Homes)
 
         with arcpy.da.SearchCursor(ComPlus_BusiLic, Fields, sqlquery) as sc:
             with arcpy.da.InsertCursor(TempTable, Fields) as ic:
@@ -107,7 +104,7 @@ try:
 
         #   Create the alert email text. Uses StringIO to create a string treated as a file for formatting purposes
 
-        TT_fieldnames =['PARCEL_ID', 'LICENSE', 'BUS_NAME', 'ADRS1']
+        TT_fieldnames = ['PARCEL_ID', 'LICENSE', 'BUS_NAME', 'ADRS1']
         string_obj = StringIO.StringIO()
         with arcpy.da.SearchCursor(TempTable, TT_fieldnames) as TTSC:
             for row in TTSC:
@@ -124,7 +121,7 @@ try:
         server = 'smtp.gmail.com'
         body_text = "From: {0}\r\nTo: {1}\r\nSubject: {2}\r\nHere is a list of the new licenses.\n" \
                     "These have been added to GroupHomes_complus:\n\nPCN\t\tLicense Number\tBusiness Name\t" \
-                    "Address\n\n{3}".format(sender, sendto, subject,report)
+                    "Address\n\n{3}".format(sender, sendto, subject, report)
 
         gmail = smtplib.SMTP(server, 587)
         gmail.starttls()
@@ -149,9 +146,10 @@ try:
     else:
         InSDE_tup = tuple([record[0].encode('ascii').rstrip() for record in InSDE_NotInComplus])
         if len(InSDE_tup) == 1:  # logic to fix tuple trailing comma with 1 element
-            InSDE_query = "LICENSE = '{}'".format(InSDE_tup[0])  
+            InSDE_query = "LICENSE = '{}'".format(InSDE_tup[0])
         else:
             InSDE_query = "LICENSE IN {}".format(InSDE_tup)
+        print InSDE_query
         grouphomes_lyr = arcpy.MakeFeatureLayer_management(group_homes, 'grouphomeslyr')
         arcpy.SelectLayerByAttribute_management(grouphomes_lyr, "NEW_SELECTION", InSDE_query)
         #   ensures selection exists whose quantity equals number of licenses to remove
@@ -159,18 +157,19 @@ try:
         if int(arcpy.GetCount_management(grouphomes_lyr)[0]) == (len(InSDE_NotInComplus)):
             arcpy.DeleteFeatures_management(grouphomes_lyr)
         else:
-            grouphomes_tblview = arcpy.MakeTableView_management(Planning_Group_Homes_fullpath, 'grouphomestblview')
-            arcpy.SelectLayerByAttribute_management(grouphomes_tblview, "NEW_SELECTION", InSDE_query)
+            print "count of selected records in grouphomes_tbleview != len(InSDE_NotInComplus) line 159"
+        grouphomes_tblview = arcpy.MakeTableView_management(Planning_Group_Homes_fullpath, 'grouphomestblview')
+        arcpy.SelectLayerByAttribute_management(grouphomes_tblview, "NEW_SELECTION", InSDE_query)
         #   ensures selection exists whose quantity equals number of licenses to remove
         #   so that DeleteFeatures doesnt delete entire fc
         if int(arcpy.GetCount_management(grouphomes_tblview)[0]) == (len(InSDE_NotInComplus)):
             arcpy.DeleteRows_management(grouphomes_tblview)
         else:
-            print "count of selected records in grouphomes_tbleview != len(InSDE_NotInComplus) line 173"
+            print "count of selected records in grouphomes_tbleview != len(InSDE_NotInComplus) line 167"
 
         today = datetime.datetime.now().strftime("%m-%d-%Y")
         subject = 'Group Homes deleted licenses ' + today
-        sendto = ['cdglass@wpb.org', 'jssawyer@wpb.org'] # ,'JJudge@wpb.org','NKerr@wpb.org'
+        sendto = ['cdglass@wpb.org', 'jssawyer@wpb.org']  # ,'JJudge@wpb.org','NKerr@wpb.org'
         sender = 'scriptmonitorwpb@gmail.com'
         sender_pw = "Bibby1997"
         server = 'smtp.gmail.com'
@@ -184,13 +183,13 @@ try:
         gmail.sendmail(sender, sendto, body_text)
         gmail.quit()
 
-        with open(r"C:\Users\jsawyer\Desktop\Tickets\18140 Group Homes\logfile.txt","a") as log:
+        with open(r"C:\Users\jsawyer\Desktop\Tickets\18140 Group Homes\logfile.txt", "a") as log:
             now = datetime.datetime.now().strftime("%m-%d-%Y")
             log.write("\n------------------------------------------\n\n")
             log.write(now)
             log.write('\n')
             log.write('This license has been deleted:')
-            log.write(", ").join(str(obj) for obj in InSDE_NotInComplus)
+            log.write(str(InSDE_NotInComplus))
             log.write("\n")
 
 except Exception as E:
@@ -206,8 +205,8 @@ except Exception as E:
 
     gmail = smtplib.SMTP(server, 587)
     gmail.starttls()
-    gmail.login(sender,sender_pw)
-    gmail.sendmail(sender,sendto,body_text)
+    gmail.login(sender, sender_pw)
+    gmail.sendmail(sender, sendto, body_text)
     gmail.quit()
 
     print body_text
