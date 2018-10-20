@@ -60,6 +60,7 @@ try:
             now = datetime.datetime.now().strftime("%Y-%d-%m")
             log.write("\n-----------------\n")
             log.write(now + " no new Group Homes found\n\n")
+        print "nothing to add"
 
     else:
         #   InComplus_NotInSDE is in unicode, need it in plain ascii text for query
@@ -142,6 +143,7 @@ try:
     if len(InSDE_NotInComplus) == 0:
         with open(r"C:\Users\jsawyer\Desktop\Tickets\18140 Group Homes\logfile.txt", "a") as log:
             log.write("no new Group Homes deleted \n\n")
+        print "nothing to delete"
 
     else:
         InSDE_tup = tuple([record[0].encode('ascii').rstrip() for record in InSDE_NotInComplus])
