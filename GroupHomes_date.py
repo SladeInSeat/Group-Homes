@@ -15,7 +15,7 @@ ComPlus_BusiLic = r"Database Connections\COMMPLUS.sde\COMPLUS.WPB_ALL_BUSINESSLI
 Planning_Group_Homes = r"Planning.SDE.WPB_GIS_GROUP_HOMES"
 Planning_Group_Homes_fullpath = r"Database Connections\SDE@Planning_CLUSTER.sde\Planning.SDE.WPB_GIS_GROUP_HOMES"
 Fields = [Field.baseName.encode('ascii') for Field in arcpy.ListFields(Planning_Group_Homes) if Field.baseName not in
-          ['OBJECTID', 'TYPE']]
+          ['OBJECTID', 'GH_TYPE']]
 query_layer = "GROUP_HOMES_QL"
 group_homes_poly = "GROUP_HOMES_poly"
 group_homes_points = "GROUP_HOMES_points"
@@ -57,7 +57,7 @@ try:
     #  If InSDE_NotInComplus has members, delete record from AlcoholLicense_complus and GIS_ALCOHOL_LICENSES
     if len(InComplus_NotInSDE) == 0:
         with open(r"C:\Users\jsawyer\Desktop\Tickets\18140 Group Homes\logfile.txt", "a") as log:
-            now = datetime.datetime.now().strftime("%Y-%d-%m")
+            now = datetime.datetime.now().strftime("%m-%d-%Y")
             log.write("\n-----------------\n")
             log.write(now + " no new Group Homes found\n\n")
         print "nothing to add"
@@ -65,7 +65,6 @@ try:
     else:
         #   InComplus_NotInSDE is in unicode, need it in plain ascii text for query
         InComplus_NotInSDE_tup = tuple([license[0].encode('ascii').rstrip() for license in InComplus_NotInSDE])
-        print len(InComplus_NotInSDE_tup)
 
         #   trailing comma of single element tuples breaks query
         if len(InComplus_NotInSDE_tup) == 1:
@@ -92,7 +91,7 @@ try:
         sql = "SELECT PARCELS.[OBJECTID],[OWNPARCELID] AS PARCELS_PCN,[SRCREF],[OWNTYPE]," \
               "[GISdata_GISADMIN_OwnerParcel_AR],[LASTUPDATE],[LASTEDITOR],[Shape],[PARCEL_ID] AS COMPLUS_PCN," \
               "[BUSINESS_ID],[LICENSE],[CATEGORY],[CATEGORY_DESC],[STAT],[ISSUE],[EXPIRATION],[BUS_NAME],[BUS_PROD]," \
-              "[SERVICE],[ADRS1],[BUS_PHONE],[BUS_EMAIL],[TYPE] FROM [Planning].[sde].[PLANNINGPARCELS] PARCELS," \
+              "[SERVICE],[ADRS1],[BUS_PHONE],[BUS_EMAIL],[GH_TYPE] FROM [Planning].[sde].[PLANNINGPARCELS] PARCELS," \
               "[Planning].[sde].[WPB_GIS_GROUP_HOMES] GROUPHOMES WHERE PARCELS.OWNPARCELID = GROUPHOMES.PARCEL_ID " \
               "AND {}".format(sqlquery)
 
@@ -152,7 +151,7 @@ try:
         else:
             InSDE_query = "LICENSE IN {}".format(InSDE_tup)
         print InSDE_query
-        grouphomes_lyr = arcpy.MakeFeatureLayer_management(group_homes, 'grouphomeslyr')
+        grouphomes_lyr = arcpy.MakeFeatureLayer_management('in_memory', 'grouphomeslyr')
         arcpy.SelectLayerByAttribute_management(grouphomes_lyr, "NEW_SELECTION", InSDE_query)
         #   ensures selection exists whose quantity equals number of licenses to remove
         #   so that DeleteFeatures doesnt delete entire fc
