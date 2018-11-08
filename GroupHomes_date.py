@@ -168,15 +168,17 @@ try:
         else:
             print "count of selected records in grouphomes_tbleview != len(InSDE_NotInComplus) line 167"
 
-        today = datetime.datetime.now().strftime("%m-%d-%Y")
-        subject = 'Group Homes deleted licenses ' + today
-        sendto = ['cdglass@wpb.org', 'jssawyer@wpb.org']  # ,'JJudge@wpb.org','NKerr@wpb.org'
-        sender = 'scriptmonitorwpb@gmail.com'
-        sender_pw = "Bibby1997"
-        server = 'smtp.gmail.com'
-        body_text = "From: {0}\r\nTo: {1}\r\nSubject: {2}\r\nHere is a list license numbers of the deleted records.\n" \
-                    "These have been deleted from GroupHomes_complus feature class and " \
-                    "Planning.SDE.WPB_GIS_GROUP_HOMES:\n{3}".format(sender, sendto, subject, InSDE_query)
+        sendmail('Group Homes deleted licenses',['cdglass@wpb.org', 'jssawyer@wpb.org'],'These have been deleted from GroupHomes_complus feature class and Planning.SDE.WPB_GIS_GROUP_HOMES:',InSDE_query)
+
+        # today = datetime.datetime.now().strftime("%m-%d-%Y")
+        # subject = 'Group Homes deleted licenses ' + today
+        # sendto = ['cdglass@wpb.org', 'jssawyer@wpb.org']  # ,'JJudge@wpb.org','NKerr@wpb.org'
+        # sender = 'scriptmonitorwpb@gmail.com'
+        # sender_pw = "Bibby1997"
+        # server = 'smtp.gmail.com'
+        # body_text = "From: {0}\r\nTo: {1}\r\nSubject: {2}\r\nHere is a list license numbers of the deleted records.\n" \
+        #             "These have been deleted from GroupHomes_complus feature class and " \
+        #             "Planning.SDE.WPB_GIS_GROUP_HOMES:\n{3}".format(sender, sendto, subject, InSDE_query)
 
         gmail = smtplib.SMTP(server, 587)
         gmail.starttls()
@@ -219,3 +221,21 @@ finally:
     for fc in del_list:
         if fc:
             arcpy.Delete_management(fc)
+
+
+def sendmail(subject_param, sendto_param, body_text_param, report_param):
+
+    today = datetime.datetime.now().strftime("%d-%m-%Y")
+    subject = "{} {}".format(subject_param,today)
+    sender = 'scriptmonitorwpb@gmail.com'
+    sender_pw = 'Bibby1997'
+    server = 'smtp.gmail.com'
+    body_text = "From: {0}\r\nTo: {1}\r\nSubject: {2}\r\n" \
+                "\n{3}\n\t{4}"\
+                .format(sender, sendto_param, subject, body_text_param, report_param)
+
+    gmail = smtplib.SMTP(server, 587)
+    gmail.starttls()
+    gmail.login(sender, sender_pw)
+    gmail.sendmail(sender, sendto, body_text)
+    gmail.quit()
