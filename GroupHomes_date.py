@@ -168,7 +168,8 @@ try:
         else:
             print "count of selected records in grouphomes_tbleview != len(InSDE_NotInComplus) line 167"
 
-        sendmail('Group Homes deleted licenses',['cdglass@wpb.org', 'jssawyer@wpb.org'],'These have been deleted from GroupHomes_complus feature class and Planning.SDE.WPB_GIS_GROUP_HOMES:',InSDE_query)
+        sendmail('Group Homes deleted licenses',['cdglass@wpb.org', 'jssawyer@wpb.org'],'These have been deleted from'
+                ' GroupHomes_complus feature class and Planning.SDE.WPB_GIS_GROUP_HOMES:',InSDE_query)
 
         # today = datetime.datetime.now().strftime("%m-%d-%Y")
         # subject = 'Group Homes deleted licenses ' + today
