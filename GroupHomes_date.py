@@ -8,7 +8,7 @@ import StringIO
 arcpy.env.workspace = r"Database Connections\SDE@Planning_CLUSTER.sde"
 arcpy.env.overwriteOutput = True
 db_conn = r"Database Connections\SDE@Planning_CLUSTER.sde"
-
+logfile = r"C:\Users\jsawyer\Desktop\Tickets\18140 Group Homes\logfile.txt"
 
 #   data
 ComPlus_BusiLic = r"Database Connections\COMMPLUS.sde\COMPLUS.WPB_ALL_BUSINESSLICENSES"
@@ -22,7 +22,6 @@ group_homes_points = "GROUP_HOMES_points"
 group_homes = r"Database Connections\SDE@Planning_CLUSTER.sde\Planning.SDE.GroupHomes_complus"
 spatialref = arcpy.Describe(r"Database Connections\SDE@Planning_CLUSTER.sde\Planning.SDE.LandUsePlanning")\
     .spatialReference.exportToString()
-
 
 #   This sql query defines the data set by selecting from All_BUSINESSLICENSES on Comprod
 #   623110 Nursing Care Facilities
@@ -56,7 +55,7 @@ try:
     #  If InComplus_NotInSDE has members, append record to GIS_ALCOHOL_LICENSES, and add point to AlcoholLicense_complus
     #  If InSDE_NotInComplus has members, delete record from AlcoholLicense_complus and GIS_ALCOHOL_LICENSES
     if len(InComplus_NotInSDE) == 0:
-        with open(r"C:\Users\jsawyer\Desktop\Tickets\18140 Group Homes\logfile.txt", "a") as log:
+        with open(logfile, "a") as log:
             now = datetime.datetime.now().strftime("%m-%d-%Y")
             log.write("\n-----------------\n")
             log.write(now + " no new Group Homes found\n\n")
@@ -112,24 +111,15 @@ try:
                 string_obj.write('\n')
 
         report = string_obj.getvalue()
-
         today = datetime.datetime.now().strftime("%m-%d-%Y")
-        subject = 'Group Homes report ' + today
-        sendto = ['cdglass@wpb.org', 'jssawyer@wpb.org']  # ,'JJudge@wpb.org','NKerr@wpb.org'
-        sender = 'scriptmonitorwpb@gmail.com'
-        sender_pw = "Bibby1997"
-        server = 'smtp.gmail.com'
-        body_text = "From: {0}\r\nTo: {1}\r\nSubject: {2}\r\nHere is a list of the new licenses.\n" \
-                    "These have been added to GroupHomes_complus:\n\nPCN\t\tLicense Number\tBusiness Name\t" \
-                    "Address\n\n{3}".format(sender, sendto, subject, report)
 
-        gmail = smtplib.SMTP(server, 587)
-        gmail.starttls()
-        gmail.login(sender, sender_pw)
-        gmail.sendmail(sender, sendto, body_text)
-        gmail.quit()
+        sendmail('Group Homes report {}'.format(today),
+                 ['cdglass@wpb.org', 'jssawyer@wpb.org'],
+                 "These have been added to GroupHomes_complus:\n\nPCN\t\tLicense Number\tBusiness Name\t" \
+                 "Address\n\n",
+                 report)
 
-        with open(r"C:\Users\jsawyer\Desktop\Tickets\18140 Group Homes\logfile.txt", "a") as log:
+        with open(logfile, "a") as log:
             now = datetime.datetime.now().strftime("%m-%d-%Y")
             log.write("\n------------------------------------------\n\n")
             log.write(now)
@@ -140,7 +130,7 @@ try:
     #   This section will delete from group_homes_complus and Planning.SDE.WPB_GIS_GROUP_HOMES any records that exists
     #   in Planning SDE but not in Complus (probably due to status change in complus)
     if len(InSDE_NotInComplus) == 0:
-        with open(r"C:\Users\jsawyer\Desktop\Tickets\18140 Group Homes\logfile.txt", "a") as log:
+        with open(logfile, "a") as log:
             log.write("no new Group Homes deleted \n\n")
         print "nothing to delete"
 
@@ -168,26 +158,12 @@ try:
         else:
             print "count of selected records in grouphomes_tbleview != len(InSDE_NotInComplus) line 167"
 
-        sendmail('Group Homes deleted licenses',['cdglass@wpb.org', 'jssawyer@wpb.org'],'These have been deleted from'
-                ' GroupHomes_complus feature class and Planning.SDE.WPB_GIS_GROUP_HOMES:',InSDE_query)
+        sendmail('Group Homes deleted licenses',
+                 ['cdglass@wpb.org', 'jssawyer@wpb.org'],
+                 'These have been deleted from GroupHomes_complus feature class and Planning.SDE.WPB_GIS_GROUP_HOMES:'
+                 ,InSDE_query)
 
-        # today = datetime.datetime.now().strftime("%m-%d-%Y")
-        # subject = 'Group Homes deleted licenses ' + today
-        # sendto = ['cdglass@wpb.org', 'jssawyer@wpb.org']  # ,'JJudge@wpb.org','NKerr@wpb.org'
-        # sender = 'scriptmonitorwpb@gmail.com'
-        # sender_pw = "Bibby1997"
-        # server = 'smtp.gmail.com'
-        # body_text = "From: {0}\r\nTo: {1}\r\nSubject: {2}\r\nHere is a list license numbers of the deleted records.\n" \
-        #             "These have been deleted from GroupHomes_complus feature class and " \
-        #             "Planning.SDE.WPB_GIS_GROUP_HOMES:\n{3}".format(sender, sendto, subject, InSDE_query)
-
-        gmail = smtplib.SMTP(server, 587)
-        gmail.starttls()
-        gmail.login(sender, sender_pw)
-        gmail.sendmail(sender, sendto, body_text)
-        gmail.quit()
-
-        with open(r"C:\Users\jsawyer\Desktop\Tickets\18140 Group Homes\logfile.txt", "a") as log:
+        with open(logfile, "a") as log:
             now = datetime.datetime.now().strftime("%m-%d-%Y")
             log.write("\n------------------------------------------\n\n")
             log.write(now)
@@ -197,27 +173,15 @@ try:
             log.write("\n")
 
 except Exception as E:
-    today = datetime.datetime.now().strftime("%m-%d-%Y")
-    subject = 'Group Homes script failure report ' + today
-    sendto = "jssawyer@wpb.org"  # ,'JJudge@wpb.org','NKerr@wpb.org'
-    sender = 'scriptmonitorwpb@gmail.com'
-    sender_pw = "Bibby1997"
-    server = 'smtp.gmail.com'
     log = traceback.format_exc()
-    body_text = "From: {0}\r\nTo: {1}\r\nSubject: {2}\r\nAn error occured. Here are the Type, arguements, " \
-                "and log of the error\n\n{3}\n{4}\n{5}".format(sender, sendto, subject, type(E).__name__, E.args, log)
-
-    gmail = smtplib.SMTP(server, 587)
-    gmail.starttls()
-    gmail.login(sender, sender_pw)
-    gmail.sendmail(sender, sendto, body_text)
-    gmail.quit()
-
-    print body_text
+    sendmail("Group Homes script failure report",
+             "jssawyer@wpb.org",
+             "An error occured. Here are the Type, arguements, and log of the error",
+             "{0}\n{1}\n{2}".format(type(E).__name__, E.args, log))
+    print type(E).__name__, E.args, log
 
 finally:
     arcpy.AcceptConnections(db_conn, True)
-
     del_list = (group_homes_poly, group_homes_points)
     for fc in del_list:
         if fc:
@@ -225,7 +189,6 @@ finally:
 
 
 def sendmail(subject_param, sendto_param, body_text_param, report_param):
-
     today = datetime.datetime.now().strftime("%d-%m-%Y")
     subject = "{} {}".format(subject_param,today)
     sender = 'scriptmonitorwpb@gmail.com'
@@ -234,9 +197,8 @@ def sendmail(subject_param, sendto_param, body_text_param, report_param):
     body_text = "From: {0}\r\nTo: {1}\r\nSubject: {2}\r\n" \
                 "\n{3}\n\t{4}"\
                 .format(sender, sendto_param, subject, body_text_param, report_param)
-
     gmail = smtplib.SMTP(server, 587)
     gmail.starttls()
     gmail.login(sender, sender_pw)
-    gmail.sendmail(sender, sendto, body_text)
+    gmail.sendmail(sender, sendto_param, body_text)
     gmail.quit()
