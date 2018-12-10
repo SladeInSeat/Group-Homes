@@ -5,6 +5,7 @@ import datetime
 import StringIO
 
 
+
 arcpy.env.workspace = r"Database Connections\SDE@Planning_CLUSTER.sde"
 arcpy.env.overwriteOutput = True
 db_conn = r"Database Connections\SDE@Planning_CLUSTER.sde"
