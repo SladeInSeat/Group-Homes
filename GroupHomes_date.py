@@ -116,7 +116,7 @@ def main():
 
             sendMail('Group Homes report {}'.format(today),
                      ['cdglass@wpb.org', 'jssawyer@wpb.org'],
-                     "These have been added to GroupHomes_complus:\nPCN\t\tLicense Number\tBusiness Name\tAddress\n\n",
+                     "These have been added to GroupHomes_complus:\nPCN\tLicense Number\tBusiness Name\tAddress\n",
                      report)
 
             with open(logfile, "a") as log:
