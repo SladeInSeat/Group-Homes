@@ -23,6 +23,8 @@ group_homes_points = "GROUP_HOMES_points"
 group_homes = r"Database Connections\SDE@Planning_CLUSTER.sde\Planning.SDE.GroupHomes_complus"
 spatialref = arcpy.Describe(r"Database Connections\SDE@Planning_CLUSTER.sde\Planning.SDE.LandUsePlanning")\
     .spatialReference.exportToString()
+buffer_1000 = r"Planning.SDE.GroupHomes_buffer1000"
+buffer_1200 = r"Planning.SDE.GroupHomes_buffer1200"
 
 #   This sql query defines the data set by selecting from All_BUSINESSLICENSES on Comprod
 #   623110 Nursing Care Facilities
@@ -141,7 +143,7 @@ def main():
             else:
                 InSDE_query = "LICENSE IN {}".format(InSDE_tup)
             print InSDE_query
-            grouphomes_lyr = arcpy.MakeFeatureLayer_management('in_memory', 'grouphomeslyr')
+            grouphomes_lyr = arcpy.MakeFeatureLayer_management('grouphomeslyr', 'in_memory\grouphomes')
             arcpy.SelectLayerByAttribute_management(grouphomes_lyr, "NEW_SELECTION", InSDE_query)
             #   ensures selection exists whose quantity equals number of licenses to remove
             #   so that DeleteFeatures doesnt delete entire fc
@@ -158,9 +160,24 @@ def main():
             else:
                 print "count of selected records in grouphomes_tbleview != len(InSDE_NotInComplus) line 167"
 
+            buffer1000_lyr = arcpy.MakeFeatureLayer_management(buffer_1000, 'in_memory\Buffers1000')
+            buffer1200_lyr = arcpy.MakeFeatureLayer_management(buffer_1200, 'in_memory\Buffers1200')
+
+            for fc in [buffer1000_lyr,buffer1200_lyr]:
+                arcpy.SelectLayerByAttribute_management(fc,"NEW_SELECTION",InSDE_query)
+                if int(arcpy.GetCount_management(fc)[0]) == (len(InSDE_NotInComplus)):
+                    arcpy.DeleteFeatures_management(fc)
+                else:
+                    sendMail('Group Homes deleted but buffers still exist',
+                             ['jssawyer@wpb.org','cdglass@wpb.org'],
+                             'These licenses have been deleted but their buffers remain because of some error. Have'
+                             'slade investigate',
+                             InSDE_query)
+
             sendMail('Group Homes deleted licenses',
                      ['cdglass@wpb.org', 'jssawyer@wpb.org'],
-                     'These have been deleted from GroupHomes_complus feature class and Planning.SDE.WPB_GIS_GROUP_HOMES:'
+                     'These have been deleted from GroupHomes_complus feature class'
+                     ' and Planning.SDE.WPB_GIS_GROUP_HOMES, and their buffers have been deleted:'
                      , InSDE_query)
 
             with open(logfile, "a") as log:
@@ -193,7 +210,7 @@ def sendMail(subject_param, sendto_param, body_text_param, report_param):
     sender = 'scriptmonitorwpb@gmail.com'
     sender_pw = 'Bibby1997'
     server = 'smtp.gmail.com'
-    body_text = "From: {0}\r\nTo: {1}\r\nSubject: {2}\r\n" \
+    body_text = "From: {0}\nTo: {1}\nSubject: {2}\n" \
                 "\n{3}\n\t{4}"\
                 .format(sender, sendto_param, subject, body_text_param, report_param)
     gmail = smtplib.SMTP(server, 587)
