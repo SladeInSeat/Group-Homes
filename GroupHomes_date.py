@@ -9,7 +9,7 @@ import StringIO
 arcpy.env.workspace = r"Database Connections\SDE@Planning_CLUSTER.sde"
 arcpy.env.overwriteOutput = True
 db_conn = r"Database Connections\SDE@Planning_CLUSTER.sde"
-logfile = r"C:\Users\jsawyer\Desktop\Tickets\18140 Group Homes\logfile.txt"
+logfile = r"Q:\log_files\Group_Homes\logfile.txt"
 
 #   data
 ComPlus_BusiLic = r"Database Connections\COMMPLUS.sde\COMPLUS.WPB_ALL_BUSINESSLICENSES"
@@ -77,7 +77,7 @@ def main():
             print 'sqlquery is: {}'.format(sqlquery)
 
             #   it doesnt like insert cursor, so make a temp table and append to that, then append to GIS_ALCOHOL_LICENSES
-            TempTable = arcpy.CreateTable_management(r"in_memory", "TempTableGroupHomes", Planning_Group_Homes)
+            TempTable = arcpy.CreateTable_management("in_memory", "TempTableGroupHomes", Planning_Group_Homes)
 
             with arcpy.da.SearchCursor(ComPlus_BusiLic, Fields, sqlquery) as sc:
                 with arcpy.da.InsertCursor(TempTable, Fields) as ic:
@@ -160,6 +160,10 @@ def main():
             else:
                 print "count of selected records in grouphomes_tbleview != len(InSDE_NotInComplus) line 167"
 
+            ##  Below is functionality to delete buffer polygons of deleted licenses from Planning.
+            ##  it create layers of the fcs, selects by the same query as deletion process,
+            ##  deletes the polygons, emails if unsucessful at deleting
+
             buffer1000_lyr = arcpy.MakeFeatureLayer_management(buffer_1000, 'in_memory\Buffers1000')
             buffer1200_lyr = arcpy.MakeFeatureLayer_management(buffer_1200, 'in_memory\Buffers1200')
 
@@ -168,7 +172,7 @@ def main():
                 if int(arcpy.GetCount_management(fc)[0]) == (len(InSDE_NotInComplus)):
                     arcpy.DeleteFeatures_management(fc)
                 else:
-                    sendMail('Group Homes deleted but buffers still exist',
+                    sendMail('Group Homes licenses deleted but buffers still exist',
                              ['jssawyer@wpb.org','cdglass@wpb.org'],
                              'These licenses have been deleted but their buffers remain because of some error. Have'
                              'slade investigate',
@@ -177,8 +181,8 @@ def main():
             sendMail('Group Homes deleted licenses',
                      ['cdglass@wpb.org', 'jssawyer@wpb.org'],
                      'These have been deleted from GroupHomes_complus feature class'
-                     ' and Planning.SDE.WPB_GIS_GROUP_HOMES, and their buffers have been deleted:'
-                     , InSDE_query)
+                     ' and Planning.SDE.WPB_GIS_GROUP_HOMES, and their buffers have been deleted:',
+                     InSDE_query)
 
             with open(logfile, "a") as log:
                 now = datetime.datetime.now().strftime("%m-%d-%Y")
