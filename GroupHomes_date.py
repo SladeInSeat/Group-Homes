@@ -143,7 +143,7 @@ def main():
             else:
                 InSDE_query = "LICENSE IN {}".format(InSDE_tup)
             print InSDE_query
-            grouphomes_lyr = arcpy.MakeFeatureLayer_management('grouphomeslyr', 'in_memory\grouphomes')
+            grouphomes_lyr = arcpy.MakeFeatureLayer_management(group_homes, 'in_memory\grouphomes')
             arcpy.SelectLayerByAttribute_management(grouphomes_lyr, "NEW_SELECTION", InSDE_query)
             #   ensures selection exists whose quantity equals number of licenses to remove
             #   so that DeleteFeatures doesnt delete entire fc
@@ -151,7 +151,7 @@ def main():
                 arcpy.DeleteFeatures_management(grouphomes_lyr)
             else:
                 print "count of selected records in grouphomes_tbleview != len(InSDE_NotInComplus) line 159"
-            grouphomes_tblview = arcpy.MakeTableView_management(Planning_Group_Homes_fullpath, 'grouphomestblview')
+            grouphomes_tblview = arcpy.MakeTableView_management(Planning_Group_Homes_fullpath, 'in_memory\grouphomestblview')
             arcpy.SelectLayerByAttribute_management(grouphomes_tblview, "NEW_SELECTION", InSDE_query)
             #   ensures selection exists whose quantity equals number of licenses to remove
             #   so that DeleteFeatures doesnt delete entire fc
@@ -171,6 +171,11 @@ def main():
                 arcpy.SelectLayerByAttribute_management(fc,"NEW_SELECTION",InSDE_query)
                 if int(arcpy.GetCount_management(fc)[0]) == (len(InSDE_NotInComplus)):
                     arcpy.DeleteFeatures_management(fc)
+                    sendMail('Group Homes deleted licenses',
+                             ['cdglass@wpb.org', 'jssawyer@wpb.org'],
+                             'These have been deleted from GroupHomes_complus feature class'
+                             ' and Planning.SDE.WPB_GIS_GROUP_HOMES, and their buffers have been deleted:',
+                             InSDE_query)
                 else:
                     sendMail('Group Homes licenses deleted but buffers still exist',
                              ['jssawyer@wpb.org','cdglass@wpb.org'],
@@ -178,11 +183,7 @@ def main():
                              'slade investigate',
                              InSDE_query)
 
-            sendMail('Group Homes deleted licenses',
-                     ['cdglass@wpb.org', 'jssawyer@wpb.org'],
-                     'These have been deleted from GroupHomes_complus feature class'
-                     ' and Planning.SDE.WPB_GIS_GROUP_HOMES, and their buffers have been deleted:',
-                     InSDE_query)
+
 
             with open(logfile, "a") as log:
                 now = datetime.datetime.now().strftime("%m-%d-%Y")
